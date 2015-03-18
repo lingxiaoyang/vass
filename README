@@ -7,9 +7,9 @@ This project aims to implement the core of Perry Cook’s singing voice synthesi
 
 Cook’s synthesizer models the vocal tract as a set of equal-length cylindrical tubes with different radii. The length of each section is given by `c/Fs`, where `c` is the speed of sound and `Fs` the sampling frequency [2]. The propagation of the sound is implemented by digital waveguide model with scattering junctions. The vocal source is not physically modelled, but a pre-calculated wavetable to excite the artificial vocal tract.
 
-The project will result in a Pure Data patch, and a web interface that loads the patch with WebPd [2] and provides controls. The selection of technology is based on the generality of Pure Data and its resemblence to the schematic diagram as shown in Cook’s paper.
+The project will result in a Pure Data patch, and a web interface that loads the patch with WebPd [3] and provides controls. The selection of technology is based on the generality of Pure Data and its resemblence to the schematic diagram as shown in Cook’s paper.
 
-The implementation of digital waveguide model will reference a lab exercise of CCRMA’s RealSimple project [3].
+The implementation of digital waveguide model will reference a lab exercise of CCRMA’s RealSimple project [4].
 
 The controls will be exposed as a part of the web interface, or controlled programmatically in JavaScript.
 
