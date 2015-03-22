@@ -1,57 +1,49 @@
 <!doctype html>
 <html ng-app="pdApp">
-<head>
-  <script src="http://sebpiq.github.io/WebPd/dist/webpd-latest.js"></script>
-  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.0-beta.5/angular.min.js"></script>
-</head>
-<body ng-controller="main">
-<script id="patchFile" type="text/pd">
-#N canvas 675 62 639 442 10;
-#X obj 99 210 dac~;
-#X obj 106 124 osc~ 440;
-#X obj 66 18 osc~ 10;
-#X obj 107 86 +~ 0;
-#X obj 67 62 *~ 1;
-#X obj 65 -20 r modulation_frequency;
-#X obj 144 15 r modulation_depth;
-#X obj 164 48 r carrier_frequency;
-#X connect 1 0 0 0;
-#X connect 1 0 0 1;
-#X connect 2 0 4 0;
-#X connect 3 0 1 0;
-#X connect 4 0 3 0;
-#X connect 5 0 2 0;
-#X connect 6 0 4 1;
-#X connect 7 0 3 1;
-</script>
-<script>
-  angular.module('pdApp', [])
-  .controller('main', ['$scope', function ($scope) {
-    var patchFile = document.getElementById('patchFile').text;
-    var patch = $scope.patch = Pd.compat.parse(patchFile);
+  <head>
+    <script src="webpd-latest.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.0-beta.5/angular.min.js"></script>
+  </head>
+  <body ng-controller="main">
+    <script>
+     angular.module('pdApp', [])
+            .controller('main', ['$scope', '$http', function ($scope, $http) {
+       $http.get("patch-prep.pd").success(function (data) {
+         var patch = $scope.patch = Pd.compat.parse(data);
 
-    $scope.$watch('modulation_frequency', function (newval, oldval) {
-      patch.send('modulation_frequency', Number(newval));
-    });
-    $scope.$watch('modulation_depth', function (newval, oldval) {
-      patch.send('modulation_depth', Number(newval));
-    });
-    $scope.$watch('carrier_frequency', function (newval, oldval) {
-      patch.send('carrier_frequency', Number(newval));
-    });
+         $scope.$watch('k12', function (newval, oldval) {
+           patch.send('k12', Number(newval));
+         });
+         $scope.$watch('k23', function (newval, oldval) {
+           patch.send('k23', Number(newval));
+         });
+         $scope.$watch('k34', function (newval, oldval) {
+           patch.send('k34', Number(newval));
+         });
+         $scope.$watch('freq', function (newval, oldval) {
+           patch.send('freq', Number(newval));
+         });
+         $scope.$watch('idx', function (newval, oldval) {
+           patch.send('idx', Number(newval));
+         });
 
-    $scope.modulation_frequency = 440;
-    $scope.modulation_depth = 440;
-    $scope.carrier_frequency = 440;
-  }]);
-</script>
+         $scope.k12 = 0.5;
+         $scope.k23 = 0.5;
+         $scope.k34 = 0.5;
+         $scope.freq = 440;
+         $scope.idx = 10;
+       });
+     }]);
+    </script>
 
 
-<p>Modulation frequency: <input type="range" min="0" max="1000" step="1" ng-model="modulation_frequency"></p>
-<p>Modulation depth: <input type="range" min="0" max="1000" step="1" ng-model="modulation_depth"></p>
-<p>Carrier frequency: <input type="range" min="0" max="1000" step="1" ng-model="carrier_frequency"></p>
+    <p>k12: <input type="range" min="-1" max="1" step="0.01" ng-model="k12"></p>
+    <p>k23: <input type="range" min="-1" max="1" step="0.01" ng-model="k23"></p>
+    <p>k34: <input type="range" min="-1" max="1" step="0.01" ng-model="k34"></p>
+    <p>Freq: <input type="range" min="80" max="1000" step="1" ng-model="freq"></p>
+    <p>Idx: <input type="range" min="1" max="20" step="1" ng-model="idx"></p>
 
-<button ng-click="patch.play()">Play</button>
-<button ng-click="patch.stop()">Stop</button>
-</body>
+    <button ng-click="patch.play()">Play</button>
+    <button ng-click="patch.stop()">Stop</button>
+  </body>
 </html>
