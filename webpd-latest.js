@@ -148,7 +148,7 @@ BiquadFilterNode.type and OscillatorNode.type.
   var isArray = Array.isArray ? Array.isArray : function _isArray(obj) {
     return Object.prototype.toString.call(obj) === "[object Array]";
   };
-  var defaultMaxListeners = 10;
+  var defaultMaxListeners = 36;
 
   function init() {
     this._events = new Object;
@@ -718,7 +718,10 @@ BiquadFilterNode.type and OscillatorNode.type.
         sampleRate: 44100,
 
         // Default block size to use for patches.
-        blockSize: 256,
+        blockSize: 64,
+
+        // Default block size for web audio API.
+        waaSize: 1024,
 
         // The number of audio channels on the output
         channelCount: 2,
@@ -1024,6 +1027,11 @@ BiquadFilterNode.type and OscillatorNode.type.
     Pd.newBuffer = function(channels) {
         if (channels === undefined) channels = 1;
         return new Pd.arrayType(Pd.blockSize * channels);
+    };
+    // Returns a brand, new, clean, buffer for Web Audio API
+    Pd.newWAABuffer = function(channels) {
+        if (channels === undefined) channels = 1;
+        return new Pd.arrayType(Pd.waaSize * channels);
     };
 
     Pd.notImplemented = function() { throw new Error('Not implemented !'); };
@@ -1541,6 +1549,11 @@ BiquadFilterNode.type and OscillatorNode.type.
         Pd.register(this);
         this.sampleRate = Pd.sampleRate;
         this.blockSize = Pd.blockSize;
+        this.waaSize = Pd.waaSize;
+        if (this.waaSize % this.blockSize != 0) {
+            throw new Error("Web Audio API block size is not an integer multiple of WebPd block size!")
+        }
+        this.multiples = this.waaSize / this.blockSize;
         this.channelCount = Pd.channelCount;
 
         // setting up the graph
@@ -1557,7 +1570,7 @@ BiquadFilterNode.type and OscillatorNode.type.
         this._scheduled = {};
 
         // create the audio output driver
-        this.audio = new Pd.AudioDriver(this.sampleRate, this.blockSize);
+        this.audio = new Pd.AudioDriver(this.sampleRate, Pd.waaSize);
         // output. One array for each channel
         this.output = [];
         // Next frame
@@ -1718,7 +1731,29 @@ BiquadFilterNode.type and OscillatorNode.type.
                 this.getAllObjects()
                     .sort(function(obj1, obj2) { return obj2.loadPriority - obj1.loadPriority; })
                     .map(function(obj) { obj.load(); }, this);
-                this.audio.play(function() { return patch.generateFrame(); });
+
+                var channels = this.channelCount;
+                var l = Pd.blockSize;
+
+                this.audio.play(function() {
+                    var buffer = []
+                    , pos = 0
+                    , i, j, k;
+                    for (i = 0; i < channels; i++) {
+                        buffer.push(Pd.newWAABuffer());
+                    }
+
+                    for (i = 0; i < patch.multiples; i++) {
+                        var frame = patch.generateFrame();
+                        for (j = 0; j < l; j++) {
+                            for (k = 0; k < channels; k++) {
+                                buffer[k][pos] = frame[k][j];
+                            }
+                            pos++;
+                        }
+                    }
+                    return buffer;
+                });
                 // reset frame counts
                 this.frame = 0;
                 this.getAllObjects().map(function(obj) { obj.frame = -1; });

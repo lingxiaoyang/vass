@@ -1,49 +1,456 @@
 <!doctype html>
-<html ng-app="pdApp">
+<html ng-app="app">
   <head>
+    <title>Very Acoustic Singing Synthesizer</title>
     <script src="webpd-latest.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.0-beta.5/angular.min.js"></script>
+    <style>
+     .tube{background:white;height:30px;position:relative}
+    </style>
   </head>
-  <body ng-controller="main">
+  <body ng-controller="main" style="background:#000;color:white">
     <script>
-     angular.module('pdApp', [])
-            .controller('main', ['$scope', '$http', function ($scope, $http) {
-       $http.get("patch-prep.pd").success(function (data) {
-         var patch = $scope.patch = Pd.compat.parse(data);
+     angular.module('app', [])
+            .controller('main', ['$scope', '$http', '$timeout', '$document', function ($scope, $http, $timeout, $document) {
+       var singer = $scope.singer = new Singer();
 
-         $scope.$watch('k12', function (newval, oldval) {
-           patch.send('k12', Number(newval));
-         });
-         $scope.$watch('k23', function (newval, oldval) {
-           patch.send('k23', Number(newval));
-         });
-         $scope.$watch('k34', function (newval, oldval) {
-           patch.send('k34', Number(newval));
-         });
-         $scope.$watch('freq', function (newval, oldval) {
-           patch.send('freq', Number(newval));
-         });
-         $scope.$watch('idx', function (newval, oldval) {
-           patch.send('idx', Number(newval));
-         });
+       function recalculate_radii() {
+         $scope.r1 = 100 * Number($scope.r1_scale);
+         $scope.r2 = $scope.r1*(1+singer.k12_)/(1-singer.k12_);
+         $scope.r3 = $scope.r2*(1+singer.k23_)/(1-singer.k23_);
+         $scope.r4 = $scope.r3*(1+singer.k34_)/(1-singer.k34_);
+         $scope.r5 = $scope.r4*(1+singer.k45_)/(1-singer.k45_);
+         $scope.r6 = $scope.r5*(1+singer.k56_)/(1-singer.k56_);
+         $scope.r7 = $scope.r6*(1+singer.k67_)/(1-singer.k67_);
+         $scope.r8 = $scope.r7*(1+singer.k78_)/(1-singer.k78_);
+         $scope.r9 = $scope.r8*(1+singer.k89_)/(1-singer.k89_);
+       }
 
-         $scope.k12 = 0.5;
-         $scope.k23 = 0.5;
-         $scope.k34 = 0.5;
-         $scope.freq = 440;
-         $scope.idx = 10;
+       $scope.$watch('k12', function (newval, oldval) {
+         singer.send('k12', Number(newval));
+         recalculate_radii();
        });
+       $scope.$watch('k23', function (newval, oldval) {
+         singer.send('k23', Number(newval));
+         recalculate_radii();
+       });
+       $scope.$watch('k34', function (newval, oldval) {
+         singer.send('k34', Number(newval));
+         recalculate_radii();
+       });
+       $scope.$watch('k45', function (newval, oldval) {
+         singer.send('k45', Number(newval));
+         recalculate_radii();
+       });
+       $scope.$watch('k56', function (newval, oldval) {
+         singer.send('k56', Number(newval));
+         recalculate_radii();
+       });
+       $scope.$watch('k67', function (newval, oldval) {
+         singer.send('k67', Number(newval));
+         recalculate_radii();
+       });
+       $scope.$watch('k78', function (newval, oldval) {
+         singer.send('k78', Number(newval));
+         recalculate_radii();
+       });
+       $scope.$watch('k89', function (newval, oldval) {
+         singer.send('k89', Number(newval));
+         recalculate_radii();
+       });
+       $scope.$watch('freq', function (newval, oldval) {
+         singer.send('freq', Number(newval));
+       });
+       $scope.$watch('gopen', function (newval, oldval) {
+         singer.setGlottal(newval);
+       });
+       $scope.$watch('volume', function (newval, oldval) {
+         singer.send('volume', Number(newval) / 100);
+       });
+       $scope.$watch('r1_scale', function (newval, oldval) {
+         recalculate_radii();
+       });
+       $scope.$watch('vibrato_depth', function (newval, oldval) {
+         singer.vibratoDepth = Number(newval);
+       });
+       $scope.$watch('vibrato_rate', function (newval, oldval) {
+         singer.vibratoRate = Number(newval);
+       });
+
+       $scope.freq = 440;
+       $scope.gopen = 0.67;
+       $scope.volume = 50;
+       $scope.r1_scale = 0.4;
+       $scope.vibrato_depth = 0.5;
+       $scope.vibrato_rate = 5;
+       $scope.octave_factor = 1;
+
+       $scope.set_k = function (k12, k23, k34, k45, k56, k67, k78, k89) {
+         $scope.k12 = k12;
+         $scope.k23 = k23;
+         $scope.k34 = k34;
+         $scope.k45 = k45;
+         $scope.k56 = k56;
+         $scope.k67 = k67;
+         $scope.k78 = k78;
+         $scope.k89 = k89;
+       };
+       var set_k = $scope.set_k;
+       $scope.set_k(0, 0, 0, 0, 0, 0, 0, 0, 0);
+       singer.play();
+
+       $scope.get_status_color = function () {
+         if (singer.utteringVowel) {
+           if (singer.utteringConsonant) {
+             return "#ff0";
+           } else {
+             return "#0f0";
+           }
+         } else {
+           if (singer.utteringConsonant) {
+             return "#f00";
+           } else {
+             return "#000";
+           }
+         }
+       }
+
+       $document.bind('keydown keyup', function (event) {
+         console.log(event);
+         $scope.$apply(function () {
+           if (event.type == 'keydown' && !event.repeat) {
+             switch (event.which) {
+               case 49: // number 1
+                 $scope.freq = 261.63 * $scope.octave_factor;
+                 break;
+               case 50: // number 2
+                 $scope.freq = 293.66 * $scope.octave_factor;
+                 break;
+               case 51: // number 3
+                 $scope.freq = 329.63 * $scope.octave_factor;
+                 break;
+               case 52: // number 4
+                 $scope.freq = 349.23 * $scope.octave_factor;
+                 break;
+               case 53: // number 5
+                 $scope.freq = 392.00 * $scope.octave_factor;
+                 break;
+               case 54: // number 6
+                 $scope.freq = 440.00 * $scope.octave_factor;
+                 break;
+               case 55: // number 7
+                 $scope.freq = 493.88 * $scope.octave_factor;
+                 break;
+               case 56: // number 8
+                 $scope.freq = 523.25 * $scope.octave_factor;
+                 break;
+               case 57: // number 9
+                 $scope.freq = 587.33 * $scope.octave_factor;
+                 break;
+               case 48: // number 0
+                 $scope.freq = 659.25 * $scope.octave_factor;
+                 break;
+
+               case 65: // a
+                 set_k(-0.09, 0.63, -0.61, 0.37, -0.1, 0.28, -0.55, -0.22);
+                 singer.utterVowel();
+                 break;
+               case 69: // e
+                 set_k(0.09, -0.09, 0.05, -0.42, 0.11, 0.26, -0.1, 0.14);
+                 singer.utterVowel();
+                 break;
+               case 79: // o
+                 set_k(0.18, 0, -0.47, 0.75, -0.12, 0.04, -0.16, -0.55);
+                 singer.utterVowel();
+                 break;
+               case 85: // u
+                 set_k(0, -0.1, 0.07, 0.9, -0.78, -0.52, -0.43, 0.33);
+                 //set_k(0, -0.1, 0.07, 0.9, -0.66, -0.45, -0.5, -0.07); // another good one, but a little bit hollow
+                 singer.utterVowel();
+                 break;
+               case 73: // i
+                 set_k(-0.14, -0.14, -0.07, -0.43, 0.38, -0.12, 0.21, 0.38);
+                 singer.utterVowel();
+                 break;
+
+               case 219: // drums...
+                 set_k(0.09, 0.19, -0.47, -0.42, -0.12, 0.04, -0.43, 0.64);
+                 singer.utterConsonant();
+                 break;
+               case 221: // drums... q -> ch
+                 set_k(-0.05, -0.29, -0.26, -0.1, -0.66, -0.35, 0.14, 0.64);
+                 singer.utterConsonant();
+                 break;
+               case 186: // drums... x -> ts
+                 set_k(-0.05, -0.26, -0.12, 0.05, 0.12, -0.59, -0.09, 0.3);
+                 singer.utterConsonant();
+                 break;
+               case 222: // drums...
+                 set_k(0.52, -0.64, 0.33, -0.24, 0.11, -0.31, 0.16, -0.03);
+                 singer.utterConsonant();
+                 break;
+               case 188: // drums...
+                 set_k(-0.5, 0.3, -0.66, 0.16, -0.52, 0.33, 0, 0.56);
+                 singer.utterConsonant();
+                 break;
+               case 190: // drums...
+                 set_k(-0.5, -0.52, 0.38, -0.19, -0.55, 0.5, 0.35, -0.71);
+                 singer.utterConsonant();
+                 break;
+
+               case 189: // minus -
+                 $scope.octave_factor /= 2;
+                 break;
+               case 187: // plus +
+                 $scope.octave_factor *= 2;
+                 break;
+
+               default:
+                 break;
+             }
+           } else if (event.type == 'keyup') {
+             var k = event.which;
+             if (k == 65 || k == 85 || k == 69 || k == 79 || k == 73) {
+               singer.muteVowel();
+             } else if (k == 219 || k == 221 || k == 186 || k == 222 || k == 188 || k == 190) {
+               singer.muteConsonant();
+             }
+           }
+
+         });
+       });
+
+       $scope.help = function () {
+         window.alert('This is "Very Acoustic Singing Synthesizer".\n\nFor quick start, press "a", "e", "i", "o" or "u" to utter a vowel, press "1" to "9" to change a pitch (C to B), and press "-" or "=" to adjust octave.\n\nThe parameters are all adjustable using sliders. The simulated vocal tract is displayed on the screen.');
+       };
      }]);
     </script>
 
+    <table style="border:1px dashed white">
+      <tr>
+        <td>
+          <p>k89: <input type="range" min="-0.99" max="0.99" step="0.01" ng-model="k89"> {{k89}}</p>
+          <p>k78: <input type="range" min="-0.99" max="0.99" step="0.01" ng-model="k78"> {{k78}}</p>
+          <p>k67: <input type="range" min="-0.99" max="0.99" step="0.01" ng-model="k67"> {{k67}}</p>
+          <p>k56: <input type="range" min="-0.99" max="0.99" step="0.01" ng-model="k56"> {{k56}}</p>
+          <p>k45: <input type="range" min="-0.99" max="0.99" step="0.01" ng-model="k45"> {{k45}}</p>
+          <p>k34: <input type="range" min="-0.99" max="0.99" step="0.01" ng-model="k34"> {{k34}}</p>
+          <p>k23: <input type="range" min="-0.99" max="0.99" step="0.01" ng-model="k23"> {{k23}}</p>
+          <p>k12: <input type="range" min="-0.99" max="0.99" step="0.01" ng-model="k12"> {{k12}}</p>
+          <p>Freq: <input type="range" min="80" max="1000" step="1" ng-model="freq"> {{freq}}</p>
+          <p>Glottal open %: <input type="range" min="0.0" max="1.0" step="0.01" ng-model="gopen"> {{gopen}}</p>
+          <p>Volume: <input type="range" min="0" max="100" step="1" ng-model="volume"> {{volume}}</p>
+          <p>Display scale: <input type="range" min="0.01" max="5" step="0.01" ng-model="r1_scale"> {{r1_scale}}</p>
+          <p>Vibrato Depth: <input type="range" min="0" max="2" step="0.05" ng-model="vibrato_depth"> {{vibrato_depth}}</p>
+          <p>Vibrato Rate: <input type="range" min="4.2" max="7" step="0.1" ng-model="vibrato_rate"> {{vibrato_rate}}</p>
 
-    <p>k12: <input type="range" min="-1" max="1" step="0.01" ng-model="k12"></p>
-    <p>k23: <input type="range" min="-1" max="1" step="0.01" ng-model="k23"></p>
-    <p>k34: <input type="range" min="-1" max="1" step="0.01" ng-model="k34"></p>
-    <p>Freq: <input type="range" min="80" max="1000" step="1" ng-model="freq"></p>
-    <p>Idx: <input type="range" min="1" max="20" step="1" ng-model="idx"></p>
+          <div>
+            <button ng-mousedown="singer.utterVowel()" ng-mouseup="singer.muteVowel()">Vowel</button>
+            <button ng-mousedown="singer.utterConsonant()" ng-mouseup="singer.muteConsonant()">Consonant</button>
+            <button ng-click="help()">Help</button>
+          </div>
+        </td>
+        <td>
+          <div style="position:relative;width:500px">
+            <div class="tube" ng-style="{width:2*r9+'px',left:(250-r9)+'px'}"></div>
+            <div class="tube" ng-style="{width:2*r8+'px',left:(250-r8)+'px'}"></div>
+            <div class="tube" ng-style="{width:2*r7+'px',left:(250-r7)+'px'}"></div>
+            <div class="tube" ng-style="{width:2*r6+'px',left:(250-r6)+'px'}"></div>
+            <div class="tube" ng-style="{width:2*r5+'px',left:(250-r5)+'px'}"></div>
+            <div class="tube" ng-style="{width:2*r4+'px',left:(250-r4)+'px'}"></div>
+            <div class="tube" ng-style="{width:2*r3+'px',left:(250-r3)+'px'}"></div>
+            <div class="tube" ng-style="{width:2*r2+'px',left:(250-r2)+'px'}"></div>
+            <div class="tube" ng-style="{width:2*r1+'px',left:(250-r1)+'px'}"></div>
+            <div style="height:270px;position:absolute;top:0;left:250px;border-left:1px dashed black"></div>
+          </div>
+          <div style="height:14px;width:14px;background:black;border:1px solid white;position:relative;left:242px;top:20px" ng-style="{'background-color': get_status_color()}"></div>
+        </td>
+      </tr>
+    </table>
 
-    <button ng-click="patch.play()">Play</button>
-    <button ng-click="patch.stop()">Stop</button>
+    <script>
+     function Singer() {
+       this.sampleRate = Pd.sampleRate;
+       this.waaSize = 256;
+       this.channelCount = Pd.channelCount;
+       this.audio = new Pd.AudioDriver(this.sampleRate, this.waaSize);
+
+       this.glottalWaveTableSize = 4096;
+       this.glottal = new Pd.arrayType(this.glottalWaveTableSize);
+       this.glottalPhase = 0;
+
+       this.vibratoWaveTableSize = 100;
+       this.vibrato = new Pd.arrayType(this.vibratoWaveTableSize);
+       for (var i = 0; i < this.vibratoWaveTableSize; i++) {
+         this.vibrato[i] = Math.sin(2*Math.PI*i/this.vibratoWaveTableSize);
+       }
+       this.vibratoPhase = 0;
+       this.vibratoDepth = 2;
+       this.vibratoRate = 5;
+
+       this._s1p = this._s1n = this._s2p = this._s2n = this._s3p = this._s3n = this._s4p = this._s4n = this._s5p = this._s5n = this._s6p = this._s6n = this._s7p = this._s7n = this._s8p = this._s8n = this._s9p = this._s9n = 0;
+
+       this.utteringVowel = false;
+       this.utteringConsonant = false;
+     }
+     Pd.extend(Singer.prototype, {
+       send: function(name, val) {
+         this[name+'_'] = val;
+       },
+       play: function() {
+         var singer = this;
+
+         if (!this.isPlaying()) {
+           console.debug('Starting audio.');
+           // fetch the actual samplerate from the audio driver
+           this.sampleRate = this.audio.getSampleRate();
+
+           var channels = this.channelCount;
+           var l = singer.waaSize;
+
+           this.audio.play(function() {
+             var buffer = []
+             , i, j, k, t;
+             for (i = 0; i < channels; i++) {
+               buffer.push(new Pd.arrayType(l));
+             }
+
+             for (j = 0; j < l; j++) {
+               t = singer.tick() * singer.volume_;
+               for (k = 0; k < channels; k++) {
+                 buffer[k][j] = t;
+               }
+             }
+             return buffer;
+           });
+         } else {
+           console.debug('Already started.');
+         }
+       },
+       stop: function() {
+         if (this.isPlaying()) {
+           console.debug('Stopping audio.');
+           this.audio.stop();
+         } else {
+           console.debug('Already stopped.');
+         }
+       },
+       isPlaying: function() {
+         return this.audio.isPlaying();
+       },
+       tick: function() {
+         var s9p = this._s9p;
+         var s9n = this._s9n;
+         var s8p = this._s8p;
+         var s8n = this._s8n;
+         var s7p = this._s7p;
+         var s7n = this._s7n;
+         var s6p = this._s6p;
+         var s6n = this._s6n;
+         var s5p = this._s5p;
+         var s5n = this._s5n;
+         var s4p = this._s4p;
+         var s4n = this._s4n;
+         var s3p = this._s3p;
+         var s3n = this._s3n;
+         var s2p = this._s2p;
+         var s2n = this._s2n;
+         var s1p = this._s1p;
+         var s1n = this._s1n;
+
+         this._s9n = -0.4*s9p;
+
+         this._s9p = (1+this.k89_)*s8p - this.k89_*s9n;
+         this._s8n = this.k89_*s8p + (1-this.k89_)*s9n
+
+         this._s8p = (1+this.k78_)*s7p - this.k78_*s8n;
+         this._s7n = this.k78_*s7p + (1-this.k78_)*s8n;
+
+         this._s7p = (1+this.k67_)*s6p - this.k67_*s7n;
+         this._s6n = this.k67_*s6p + (1-this.k67_)*s7n;
+
+         this._s6p = (1+this.k56_)*s5p - this.k56_*s6n;
+         this._s5n = this.k56_*s5p + (1-this.k56_)*s6n;
+
+         this._s5p = (1+this.k45_)*s4p - this.k45_*s5n;
+         this._s4n = this.k45_*s4p + (1-this.k45_)*s5n;
+
+         this._s4p = (1+this.k34_)*s3p - this.k34_*s4n;
+         this._s3n = this.k34_*s3p + (1-this.k34_)*s4n;
+
+         this._s3p = (1+this.k23_)*s2p - this.k23_*s3n;
+         this._s2n = this.k23_*s2p + (1-this.k23_)*s3n;
+
+         this._s2p = (1+this.k12_)*s1p - this.k12_*s2n;
+         this._s1n = this.k12_*s1p + (1-this.k12_)*s2n;
+
+         this._s1p = this.voice() + 0.9 * s1n; // glottal reflection coeff = 0.9
+
+         return s9p;
+       },
+       voice: function() {
+         var v = 0;
+         if (this.utteringVowel) {
+           var phase_inc = this.freq() / this.sampleRate;
+           var pointer = this.glottalPhase % 1 * this.glottalWaveTableSize;
+           var pointer_floor = Math.floor(pointer);
+           var pointer_ceil = Math.ceil(pointer);
+           if (pointer_ceil >= this.glottalWaveTableSize) {
+             pointer_ceil = pointer_ceil - this.glottalWaveTableSize;
+           }
+           this.glottalPhase += phase_inc;
+           v += this.glottal[pointer_floor] + (this.glottal[pointer_ceil] - this.glottal[pointer_floor]) * (pointer - pointer_floor);
+         }
+         if (this.utteringConsonant) {
+           v += Math.random();
+         }
+         return v;
+       },
+       freq: function () {
+         // instant freq, with vibrato
+         var phase_inc = this.vibratoRate / this.sampleRate;
+         var pointer = this.vibratoPhase % 1 * this.vibratoWaveTableSize;
+         var pointer_floor = Math.floor(pointer);
+         var pointer_ceil = Math.ceil(pointer);
+         if (pointer_ceil >= this.vibratoWaveTableSize) {
+           pointer_ceil = pointer_ceil - this.vibratoWaveTableSize;
+         }
+         this.vibratoPhase += phase_inc;
+         var vib = (this.vibrato[pointer_floor] + (this.vibrato[pointer_ceil] - this.vibrato[pointer_floor]) * (pointer - pointer_floor)) * this.vibratoDepth; // in whole notes
+         return this.midi2freq(this.freq2midi(this.freq_) + vib);
+       },
+       midi2freq: function (midi) {
+         return Math.pow(2, (midi-69)/12.0) * 440;
+       },
+       freq2midi: function (freq) {
+         return 69 + 12 * Math.log2(freq / 440.0);
+       },
+       setGlottal: function(openTime) {
+         var tc = Math.round(this.glottalWaveTableSize * openTime);
+         var max = (2/3.0)*tc*(2.0/3)*tc*1.0/3*tc; // maximum
+         for (var i = 0; i < tc; i++) {
+           this.glottal[i] = i * i * (tc - i) / max;
+         }
+         for (; i < this.glottalWaveTableSize; i++) {
+           this.glottal[i] = 0;
+         }
+       },
+       utterVowel: function() {
+         this.utteringVowel = true;
+         //this.utteringConsonant = false;
+       },
+       muteVowel: function () {
+         this.utteringVowel = false;
+         this.glottalPhase = 0;
+       },
+       utterConsonant: function() {
+         //this.utteringVowel = false;
+         this.utteringConsonant = true;
+       },
+       muteConsonant: function () {
+         this.utteringConsonant = false;
+       }
+     });
+    </script>
   </body>
 </html>
