@@ -25,6 +25,9 @@ The model parameters for vowels /a/, /e/, /i/, /o/, /u/ are experimented through
 ## References
 
 [1] Cook, P. 1992. SPASM: A Real-Time Vocal Tract Physical Model Editor/Controller and Singer: the Companion Software Synthesis System. Computer Music Journal 17(1): 30-44.
+
 [2] Cook, P. 1991. Identification of Control Parameters in an Articulatory Vocal Tract Model, with Applications to the Synthesis of Singing.
-[3] Rosenberg, A. 1971. Effect of glottal pulse shape on the quality of natural vowels. Journal of the Acoustical Society of America 49(2B): 583-90.
+
+[3] Rosenberg, A. 1971. Effect of glottal pulse shape on the quality of naturalvowels. Journal of the Acoustical Society of America 49(2B): 583-90.
+
 [4] WebPd, a 100% JavaScript Pure Data runtime. https://github.com/sebpiq/WebPd Accessed Mar. 17th, 2015.
